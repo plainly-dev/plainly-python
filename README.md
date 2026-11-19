@@ -93,6 +93,9 @@ with cache.raises(ValueError):           # when 4 is set to 4 / then that raises
 Checks: `then.holds({...})`, `holds_keys(...)`, `holds_nothing()`, `contains(...)`, `lacks(...)`, `has(currsize=2)`,
 `has_length(n)`, `contains_one_of(...)`, `gave(value)`. A method call is written as `update({1: 1}) is called`, with `giving ...` when it returns something.
 
+A method that returns its own object (a fluent method) keeps the story going, so the check can sit on the same line:
+`crm.post("/api/contacts", name="").then.has(status=400)` reads `when post('/api/contacts', name='') is called` / `then it has status 400`.
+
 ## Reviewing in git
 
 The code diff of a test file is noisy. Commit the spec next to the tests, and reviewers read that instead:

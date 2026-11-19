@@ -79,6 +79,9 @@ class Story:
                 shown = [self._show(a) for a in args] + [f"{k}={self._show(v)}" for k, v in kwargs.items()]
                 self._say("when", f"{name}({', '.join(shown)}) is called")
                 result = value(*args, **kwargs)
+                if result is self._target:  # a fluent method: keep the story going, so a check can follow on the same line
+                    self._remember(None)
+                    return self
                 if result is not None:
                     recorder.add(f"  giving {self._show(result)}", True)
                 self._remember(result)
