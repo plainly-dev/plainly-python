@@ -38,6 +38,7 @@ dev = ["pytest>=7"]
 
 [project.scripts]
 plainly-diff = "plainly.diff:main"
+plainly-lint = "plainly.lint:main"
 
 [project.entry-points.pytest11]
 plainly = "plainly.pytest_plugin"

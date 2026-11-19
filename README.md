@@ -166,8 +166,26 @@ The sentences in `SPEC.md` are built from the real call, so they can be trusted.
 
 - **Writing tests with plainly in another project:** write every check as one sentence (`expect`, `calling`, `spec`, `given`),
   avoid bare `assert` and `pytest.raises`, then run `pytest --plainly-md SPEC.md` and commit `SPEC.md` with the tests.
+- **Checking that tests stay plainly:** `plainly-lint tests/` lists every bare `assert` and `pytest.raises`
+  in `test_*.py` / `*_test.py` files and exits 1 if it finds any. End a line with `# plainly: allow` to keep it on purpose.
 - **Contributing to plainly itself:** read [AGENTS.md](AGENTS.md) for the layout, commands and rules.
 - A short machine-readable summary of the project is in [llms.txt](llms.txt).
+
+### Prompt for your coding agent
+
+Paste this into your project's `AGENTS.md`, `CLAUDE.md` or agent instructions:
+
+```markdown
+## Tests
+
+Write every test check as one plainly sentence, so a person can review the tests by reading `SPEC.md`:
+
+- `expect(value).should.be(x)` for values, `calling(f, *args).should.raise_(Error)` for errors,
+  `spec(f).if_(x).then_give(y)` for many examples of one function, `given(Class, ...)` for objects that change.
+- Do not use bare `assert` or `pytest.raises`. `plainly-lint tests/` must pass.
+- After changing tests, run `pytest --plainly-md SPEC.md` and commit `SPEC.md` with them.
+- If a change removes or loosens a check, say why in the pull request.
+```
 
 ## Install (from source for now)
 
@@ -208,7 +226,6 @@ read (REPL, `exec`), it falls back to `repr(value)`. Override with `expect(value
 
 - Table-style cases (`fib` with `0 -> 0, 1 -> 1, ...`) rendered as a grid
 - `--plainly` output to Markdown for PR comments
-- Lint rule/AI prompt: "write tests only using plainly sentences"
 - Spying/mocks phrased as sentences (`mailer should have been called with ...`)
 - Same sentence model for other languages
 

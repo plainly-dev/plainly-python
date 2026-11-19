@@ -22,6 +22,7 @@ No runtime dependencies. Python 3.9+. MIT license.
 | `src/plainly/recorder.py` | collects sentences while tests run |
 | `src/plainly/pytest_plugin.py` | `--plainly`, `--plainly-md`, `--plainly-check`, `--plainly-width` |
 | `src/plainly/diff.py` | the `plainly-diff` command (compares `SPEC.md` across git revisions) |
+| `src/plainly/lint.py` | the `plainly-lint` command (flags bare `assert` and `pytest.raises` in test files) |
 | `tests/` | the library's own tests |
 | `examples/` | a small demo and `spec-review.yml`, a workflow that posts `plainly-diff` on PRs |
 | `case-studies/` | real libraries' test suites rewritten with plainly; each has a committed `SPEC.md` |
@@ -33,9 +34,10 @@ pip install -e ".[dev]"          # install with pytest
 pytest                           # run the library tests and examples
 pytest --plainly                 # same, and print every check as a sentence
 plainly-diff --base origin/main SPEC.md   # what a change promises less of
+plainly-lint examples case-studies        # no bare assert / pytest.raises outside tests/
 ```
 
-CI (`.github/workflows/ci.yml`) runs `pytest --plainly` on Python 3.9 to 3.14. All six jobs must pass before a PR can merge.
+CI (`.github/workflows/ci.yml`) runs `pytest --plainly` and `plainly-lint examples case-studies` on Python 3.9 to 3.14. All six jobs must pass before a PR can merge.
 
 ## Rules
 
@@ -67,4 +69,4 @@ spec(ordinal).if_(11).then_give("11th")
 ```
 
 Prefer `spec(...)` for many examples of one function and `given(...)` for objects that change over time.
-Avoid bare `assert` and `pytest.raises`, then run `pytest --plainly-md SPEC.md` and commit `SPEC.md` with the tests.
+Avoid bare `assert` and `pytest.raises` (`plainly-lint tests/` finds them), then run `pytest --plainly-md SPEC.md` and commit `SPEC.md` with the tests.
