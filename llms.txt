@@ -18,6 +18,7 @@ Use plainly when you write or review Python unit tests and want the behaviour th
 - `given(Class, **kwargs)`: a story of steps on an object that changes, checked with `.then.holds(...)`, `.holds_keys(...)`, `.lacks(...)`, `.has(...)`
 - `pytest --plainly`: print the sentences; `--plainly-md SPEC.md`: write them; `--plainly-check SPEC.md`: fail in CI if SPEC.md is out of date
 - `plainly-diff --base origin/main SPEC.md [--fail-on-weakened]`: Markdown report of removed, loosened and changed checks
+- `plainly-lint tests/`: list bare `assert` and `pytest.raises` in test files (exit 1 if any); `# plainly: allow` keeps a line
 
 ## Examples
 
