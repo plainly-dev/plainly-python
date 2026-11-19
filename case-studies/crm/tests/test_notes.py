@@ -1,111 +1,89 @@
-"""Notes on a contact: POST /contacts/<id>/notes, shown on the contact page newest first."""
+"""Notes on a contact."""
+from plainly import compact, expect, given
 
-from plainly import given, spec
-
-from rules import CRM, after_adding_note
-
-noting_unknown = spec(after_adding_note)
+from crm import CRM
 
 
 def ann():
     crm = given(CRM)
-    crm.add_contact(name="Ann Lee", email="ann@example.com")
+    crm.post("/api/contacts", name="Ann", email="ann@x.io")
     return crm
 
 
-def test_a_note_for_a_contact_that_does_not_exist_answers_404():
-    noting_unknown.if_(99, "Call back on Monday").then_give("status 404")
-
-
-def test_adding_a_note_sends_you_back_to_the_page_of_the_contact():
+def test_a_new_contact_has_no_notes():
     crm = ann()
-    crm.after_adding_note(1, "Call back on Monday")
-    crm.then.gave("redirect to /contacts/1")
+    crm.get("/api/contacts/1/notes")
+    crm.then.has(status=200, body={"notes": []})
 
 
-def test_adding_a_note_shows_a_confirmation():
+def test_a_note_is_saved_and_given_back():
     crm = ann()
-    crm.flash_after_adding_note(1, "Call back on Monday")
-    crm.then.gave(["Note added."])
+    crm.post("/api/contacts/1/notes", text="Called, wants a demo")
+    crm.then.has(status=201, body={"id": 1, "text": "Called, wants a demo"})
 
 
-def test_a_contact_without_notes_says_so():
+def test_notes_are_listed_newest_first():
     crm = ann()
-    crm.notes_of(1)
-    crm.then.gave([])
-    crm.no_notes_text(1)
-    crm.then.gave("No notes yet.")
-    crm.add_note(1, "First call done")
-    crm.no_notes_text(1)
-    crm.then.gave(None)
+    crm.post("/api/contacts/1/notes", text="first")
+    crm.post("/api/contacts/1/notes", text="second")
+    crm.post("/api/contacts/1/notes", text="third")
+    crm.get("/api/contacts/1/notes")
+    crm.then.has(texts=["third", "second", "first"])
 
 
-def test_notes_are_shown_newest_first():
+def test_notes_belong_to_one_contact():
     crm = ann()
-    crm.add_note(1, "First call, left a voicemail")
-    crm.notes_of(1)
-    crm.then.gave(["First call, left a voicemail"])
-    crm.add_note(1, "Second call, sent the offer")
-    crm.add_note(1, "Third call, signed")
-    crm.notes_of(1)
-    crm.then.gave(["Third call, signed", "Second call, sent the offer", "First call, left a voicemail"])
+    crm.post("/api/contacts", name="Bob", email="bob@x.io")
+    crm.post("/api/contacts/1/notes", text="for Ann")
+    crm.post("/api/contacts/2/notes", text="for Bob")
+    crm.get("/api/contacts/2/notes")
+    crm.then.has(texts=["for Bob"])
 
 
-def test_two_notes_with_the_same_text_are_both_kept():
+def test_note_ids_count_across_the_whole_crm():
     crm = ann()
-    crm.add_note(1, "No answer")
-    crm.add_note(1, "No answer")
-    crm.notes_of(1)
-    crm.then.gave(["No answer", "No answer"])
+    crm.post("/api/contacts", name="Bob", email="bob@x.io")
+    crm.post("/api/contacts/1/notes", text="for Ann")
+    crm.post("/api/contacts/2/notes", text="for Bob")
+    expect(crm.body["id"]).should.be(2)
 
 
-def test_an_empty_note_is_refused_with_a_message():
-    empty = {"text": "Note cannot be empty."}
+def test_spaces_around_a_note_are_removed():
     crm = ann()
-    crm.errors_when_adding_note(1, "")
-    crm.then.gave(empty)
-    crm.errors_when_adding_note(1, "   ")
-    crm.then.gave(empty)
-    crm.errors_when_adding_note(1)
-    crm.then.gave(empty)
+    crm.post("/api/contacts/1/notes", text="  hello  ")
+    expect(crm.body["text"]).should.be("hello")
 
 
-def test_a_refused_note_answers_status_400_and_is_not_stored():
+def test_an_empty_note_is_refused_and_not_saved():
     crm = ann()
-    crm.after_adding_note(1, "   ")
-    crm.then.gave("status 400")
-    crm.notes_of(1)
-    crm.then.gave([])
+    crm.post("/api/contacts/1/notes", text="   ")
+    crm.then.has(status=400, errors={"text": "is required"})
+    crm.post("/api/contacts/1/notes")
+    crm.then.has(status=400, errors={"text": "is required"})
+    crm.get("/api/contacts/1/notes")
+    crm.then.has(texts=[])
 
 
-def test_spaces_around_a_note_are_trimmed():
+def test_a_note_can_be_1000_characters_but_not_1001():
+    crm = given(CRM, show=compact)
+    crm.post("/api/contacts", name="Ann", email="ann@x.io")
+    crm.post("/api/contacts/1/notes", text="n" * 1000)
+    crm.then.has(status=201)
+    crm.post("/api/contacts/1/notes", text="n" * 1001)
+    crm.then.has(status=400, errors={"text": "is too long"})
+
+
+def test_notes_on_an_unknown_contact_are_not_found():
     crm = ann()
-    crm.add_note(1, "   Asked for a discount  ")
-    crm.notes_of(1)
-    crm.then.gave(["Asked for a discount"])
+    crm.post("/api/contacts/99/notes", text="hello")
+    crm.then.has(status=404, error="not found")
+    crm.get("/api/contacts/99/notes")
+    crm.then.has(status=404, error="not found")
 
 
-def test_notes_belong_to_their_own_contact():
+def test_deleting_a_contact_deletes_its_notes():
     crm = ann()
-    crm.add_contact(name="Bob Stone", email="bob@example.com")
-    crm.add_note(1, "Note for Ann")
-    crm.add_note(2, "Note for Bob")
-    crm.notes_of(1)
-    crm.then.gave(["Note for Ann"])
-    crm.notes_of(2)
-    crm.then.gave(["Note for Bob"])
-
-
-def test_notes_keep_accents_symbols_and_punctuation_as_typed():
-    crm = ann()
-    crm.add_note(1, "Café 'Olé' & co: 5 < 6 > 4 - \"quoted\"")
-    crm.notes_of(1)
-    crm.then.gave(["Café 'Olé' & co: 5 < 6 > 4 - \"quoted\""])
-
-
-def test_notes_stay_when_the_contact_is_edited():
-    crm = ann()
-    crm.add_note(1, "Important client")
-    crm.edit_contact(1, name="Ann Smith", email="ann@example.com", status="customer")
-    crm.notes_of(1)
-    crm.then.gave(["Important client"])
+    crm.post("/api/contacts/1/notes", text="hello")
+    crm.delete("/api/contacts/1")
+    crm.get("/api/contacts/1/notes")
+    crm.then.has(status=404)

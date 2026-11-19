@@ -1,96 +1,60 @@
-"""The contacts list page: the table, the empty state and the pipeline summary."""
+"""Listing, searching and filtering contacts."""
+from plainly import given
 
-from plainly import given, spec
-
-from rules import CRM, empty_state_text, errors_on_page, names_listed, pipeline_counts, status_of_get
-
-list_status = spec(status_of_get)
-page_errors = spec(errors_on_page)
-nobody = {"lead": 0, "customer": 0, "lost": 0}
+from crm import CRM
 
 
-def test_the_list_page_opens_on_a_new_crm():
-    list_status.if_("/contacts").then_give(200)
-
-
-def test_a_new_crm_shows_an_empty_state_and_no_rows():
-    spec(empty_state_text).if_().then_give("No contacts yet.")
-    spec(names_listed).if_().then_give([])
-
-
-def test_the_pipeline_of_a_new_crm_counts_zero_of_each_status():
-    spec(pipeline_counts).if_().then_give(nobody)
-
-
-def test_the_list_page_shows_no_error_messages():
-    page_errors.if_("/contacts").then_give({})
-
-
-def test_the_empty_state_goes_away_once_there_is_a_contact():
+def three_contacts():
     crm = given(CRM)
-    crm.empty_state_text()
-    crm.then.gave("No contacts yet.")
-    crm.add_contact(name="Ann Lee", email="ann@example.com")
-    crm.empty_state_text()
-    crm.then.gave(None)
+    crm.post("/api/contacts", name="carla Diaz", email="carla@globex.com", company="Globex", status="customer")
+    crm.post("/api/contacts", name="Ann Lee", email="ann@x.io", company="Acme", status="lead")
+    crm.post("/api/contacts", name="Bob Stone", email="bob@acme.com", status="lost")
+    return crm
 
 
-def test_contacts_are_listed_in_the_order_they_were_added():
+def test_a_new_crm_has_no_contacts():
     crm = given(CRM)
-    crm.add_contact(name="Carol", email="carol@example.com")
-    crm.add_contact(name="Alice", email="alice@example.com")
-    crm.add_contact(name="Bob", email="bob@example.com")
-    crm.names_listed()
-    crm.then.gave(["Carol", "Alice", "Bob"])
-    crm.emails_listed()
-    crm.then.gave(["carol@example.com", "alice@example.com", "bob@example.com"])
+    crm.get("/api/contacts")
+    crm.then.has(status=200, body={"contacts": []})
 
 
-def test_each_row_is_marked_with_the_id_of_its_contact_and_links_to_it():
-    crm = given(CRM)
-    crm.add_contact(name="Carol", email="carol@example.com")
-    crm.add_contact(name="Alice", email="alice@example.com")
-    crm.ids_listed()
-    crm.then.gave(["1", "2"])
-    crm.link_of("Alice")
-    crm.then.gave("/contacts/2")
+def test_contacts_are_listed_by_name_ignoring_case():
+    crm = three_contacts()
+    crm.get("/api/contacts")
+    crm.then.has(status=200, names=["Ann Lee", "Bob Stone", "carla Diaz"])
 
 
-def test_each_row_shows_the_email_phone_company_and_status():
-    crm = given(CRM)
-    crm.add_contact(
-        name="Ann Lee", email="ann@example.com", phone="555-0100", company="Acme Corp", status="customer"
-    )
-    crm.row_of("Ann Lee")
-    crm.then.gave("ann@example.com | 555-0100 | Acme Corp | customer")
+def test_search_looks_in_name_email_and_company_ignoring_case():
+    crm = three_contacts()
+    crm.get("/api/contacts", q="ACME")
+    crm.then.has(status=200, names=["Ann Lee", "Bob Stone"])
+    crm.get("/api/contacts", q="diaz")
+    crm.then.has(names=["carla Diaz"])
+    crm.get("/api/contacts", q="@x.io")
+    crm.then.has(names=["Ann Lee"])
 
 
-def test_a_contact_without_phone_or_company_shows_them_empty():
-    crm = given(CRM)
-    crm.add_contact(name="Bob Stone", email="bob@example.com")
-    crm.row_of("Bob Stone")
-    crm.then.gave("bob@example.com | (blank) | (blank) | lead")
+def test_a_search_that_matches_nothing_gives_an_empty_list():
+    crm = three_contacts()
+    crm.get("/api/contacts", q="zebra")
+    crm.then.has(status=200, names=[])
 
 
-def test_the_pipeline_counts_the_contacts_of_each_status():
-    crm = given(CRM)
-    crm.add_contact(name="One", email="one@example.com", status="lead")
-    crm.add_contact(name="Two", email="two@example.com", status="lead")
-    crm.add_contact(name="Three", email="three@example.com", status="lead")
-    crm.add_contact(name="Four", email="four@example.com", status="customer")
-    crm.add_contact(name="Five", email="five@example.com", status="lost")
-    crm.add_contact(name="Six", email="six@example.com", status="lost")
-    crm.pipeline_counts()
-    crm.then.gave({"lead": 3, "customer": 1, "lost": 2})
+def test_contacts_can_be_filtered_by_status():
+    crm = three_contacts()
+    crm.get("/api/contacts", status="customer")
+    crm.then.has(status=200, names=["carla Diaz"])
+    crm.get("/api/contacts", status="lead")
+    crm.then.has(names=["Ann Lee"])
 
 
-def test_the_pipeline_follows_edits_and_deletes():
-    crm = given(CRM)
-    crm.add_contact(name="One", email="one@example.com", status="lead")
-    crm.add_contact(name="Two", email="two@example.com", status="lead")
-    crm.edit_contact(1, name="One", email="one@example.com", status="customer")
-    crm.pipeline_counts()
-    crm.then.gave({"lead": 1, "customer": 1, "lost": 0})
-    crm.delete_contact(2)
-    crm.pipeline_counts()
-    crm.then.gave({"lead": 0, "customer": 1, "lost": 0})
+def test_search_and_status_filter_work_together():
+    crm = three_contacts()
+    crm.get("/api/contacts", q="acme", status="lost")
+    crm.then.has(status=200, names=["Bob Stone"])
+
+
+def test_an_unknown_status_filter_is_refused():
+    crm = three_contacts()
+    crm.get("/api/contacts", status="vip")
+    crm.then.has(status=400, error="unknown status")

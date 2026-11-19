@@ -24,4 +24,4 @@ Use plainly when you write or review Python unit tests and want the behaviour th
 
 - [examples/test_fibonacci.py](https://github.com/plainly-dev/plainly-python/blob/main/examples/test_fibonacci.py): small demo
 - [examples/spec-review.yml](https://github.com/plainly-dev/plainly-python/blob/main/examples/spec-review.yml): GitHub workflow that comments plainly-diff on PRs
-- [case-studies/](https://github.com/plainly-dev/plainly-python/tree/main/case-studies): humanize, python-semver and cachetools test suites rewritten with plainly, and a CRM app built test-first by two agents
+- [case-studies/](https://github.com/plainly-dev/plainly-python/tree/main/case-studies): humanize, python-semver and cachetools test suites rewritten with plainly, and tests written first for a small Flask CRM that is not built yet
