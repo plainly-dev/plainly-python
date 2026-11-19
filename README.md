@@ -160,6 +160,15 @@ The sentences in `SPEC.md` are built from the real call, so they can be trusted.
 - A value that does not fit in a sentence is **never silently cut**. Past 100 characters `plainly` refuses to write the spec and names the sentences.
   Show the value another way: `show=compact` writes `1<400 × 0>123` for 400 zeros, a smaller example, a label, or `--plainly-width N`.
 
+## For AI agents
+
+`plainly` is built for tests written by AI coding agents. If you are an agent:
+
+- **Writing tests with plainly in another project:** write every check as one sentence (`expect`, `calling`, `spec`, `given`),
+  avoid bare `assert` and `pytest.raises`, then run `pytest --plainly-md SPEC.md` and commit `SPEC.md` with the tests.
+- **Contributing to plainly itself:** read [AGENTS.md](AGENTS.md) for the layout, commands and rules.
+- A short machine-readable summary of the project is in [llms.txt](llms.txt).
+
 ## Install (from source for now)
 
 ```

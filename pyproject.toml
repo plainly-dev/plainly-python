@@ -9,15 +9,29 @@ description = "Unit-test assertions that read like plain English, so humans can 
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.9"
-keywords = ["testing", "assertions", "bdd", "tdd", "readability", "code-review"]
+keywords = ["testing", "assertions", "pytest", "pytest-plugin", "bdd", "tdd", "readability", "code-review",
+            "specification", "ai", "llm", "ai-generated-tests", "test-review"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Framework :: Pytest",
   "License :: OSI Approved :: MIT License",
+  "Intended Audience :: Developers",
   "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Topic :: Software Development :: Testing",
 ]
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/plainly-dev/plainly-python"
+Source = "https://github.com/plainly-dev/plainly-python"
+Issues = "https://github.com/plainly-dev/plainly-python/issues"
+Documentation = "https://github.com/plainly-dev/plainly-python#readme"
 
 [project.optional-dependencies]
 dev = ["pytest>=7"]
