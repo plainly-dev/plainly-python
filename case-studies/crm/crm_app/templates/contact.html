@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% from "_forms.html" import contact_fields, field_error %}
+{% block title %}{{ contact.name }}{% endblock %}
+{% block content %}
+<h2 id="contact-name">{{ contact.name }}</h2>
+<dl>
+  <dt>Email</dt><dd id="contact-email">{{ contact.email }}</dd>
+  <dt>Phone</dt><dd id="contact-phone">{{ contact.phone }}</dd>
+  <dt>Company</dt><dd id="contact-company">{{ contact.company }}</dd>
+  <dt>Status</dt><dd id="contact-status">{{ contact.status }}</dd>
+</dl>
+
+<h3>Edit</h3>
+<form id="edit-contact-form" method="post" action="/contacts/{{ contact.id }}/edit">
+  {{ contact_fields(form, errors, statuses) }}
+  <button type="submit">Save</button>
+</form>
+
+<form id="delete-contact-form" method="post" action="/contacts/{{ contact.id }}/delete">
+  <button type="submit">Delete contact</button>
+</form>
+
+<h3>Notes</h3>
+<form id="note-form" method="post" action="/contacts/{{ contact.id }}/notes">
+  <textarea name="text" rows="3">{{ note_text }}</textarea>
+  {{ field_error(errors, 'text') }}
+  <button type="submit">Add note</button>
+</form>
+{% if notes %}
+<ul id="notes">
+  {% for note in notes %}<li class="note"><span class="note-text">{{ note }}</span></li>{% endfor %}
+</ul>
+{% else %}
+<p id="no-notes">No notes yet.</p>
+{% endif %}
+<p><a href="/contacts">Back to all contacts</a></p>
+{% endblock %}

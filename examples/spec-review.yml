@@ -1,0 +1,32 @@
+# Copy to .github/workflows/spec-review.yml. NOT tested on GitHub yet: written from the documented behaviour of
+# actions/checkout and the gh CLI, so run it on a throwaway pull request first.
+name: Spec review
+on: pull_request
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  spec:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0            # the base branch is needed to read the old SPEC.md
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+
+      # 1. the committed SPEC.md must match what the tests really say
+      - run: pytest --plainly-check SPEC.md
+
+      # 2. say what this pull request promises less of
+      - run: plainly-diff --base origin/${{ github.base_ref }} SPEC.md --output spec-review.md
+      - run: gh pr comment ${{ github.event.pull_request.number }} --body-file spec-review.md --edit-last || gh pr comment ${{ github.event.pull_request.number }} --body-file spec-review.md
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      # 3. optional: make a removed or loosened check block the merge until someone approves it
+      - run: plainly-diff --base origin/${{ github.base_ref }} SPEC.md --fail-on-weakened --output /dev/null

@@ -1,0 +1,16 @@
+{% macro field_error(errors, field) %}{% if errors.get(field) %}<p class="error" data-field="{{ field }}">{{ errors[field] }}</p>{% endif %}{% endmacro %}
+
+{% macro contact_fields(form, errors, statuses) %}
+  <label>Name <input name="name" value="{{ form.get('name', '') }}" maxlength="200"></label>
+  {{ field_error(errors, 'name') }}
+  <label>Email <input name="email" value="{{ form.get('email', '') }}"></label>
+  {{ field_error(errors, 'email') }}
+  <label>Phone <input name="phone" value="{{ form.get('phone', '') }}"></label>
+  <label>Company <input name="company" value="{{ form.get('company', '') }}"></label>
+  <label>Status
+    <select name="status">
+      {% for s in statuses %}<option value="{{ s }}"{% if form.get('status') == s %} selected{% endif %}>{{ s }}</option>{% endfor %}
+    </select>
+  </label>
+  {{ field_error(errors, 'status') }}
+{% endmacro %}

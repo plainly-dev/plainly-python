@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% from "_forms.html" import contact_fields %}
+{% block title %}Contacts{% endblock %}
+{% block content %}
+<div class="pipeline">
+  <span>Leads: <strong id="pipeline-lead">{{ counts.lead }}</strong></span>
+  <span>Customers: <strong id="pipeline-customer">{{ counts.customer }}</strong></span>
+  <span>Lost: <strong id="pipeline-lost">{{ counts.lost }}</strong></span>
+</div>
+
+<form id="search-form" method="get" action="/contacts">
+  <input name="q" value="{{ q }}" placeholder="Search name, email or company">
+  <select name="status">
+    <option value="">any status</option>
+    {% for s in statuses %}<option value="{{ s }}"{% if status_filter == s %} selected{% endif %}>{{ s }}</option>{% endfor %}
+  </select>
+  <button type="submit">Search</button>
+</form>
+
+{% if contacts %}
+<table>
+  <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Company</th><th>Status</th></tr></thead>
+  <tbody>
+  {% for c in contacts %}
+    <tr data-contact-id="{{ c.id }}">
+      <td class="name"><a href="/contacts/{{ c.id }}">{{ c.name }}</a></td>
+      <td class="email">{{ c.email }}</td>
+      <td class="phone">{{ c.phone }}</td>
+      <td class="company">{{ c.company }}</td>
+      <td class="status">{{ c.status }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p id="empty-state">{{ "No contacts match your search." if has_any else "No contacts yet." }}</p>
+{% endif %}
+
+<h2>New contact</h2>
+<form id="new-contact-form" method="post" action="/contacts">
+  {{ contact_fields(form, errors, statuses) }}
+  <button type="submit">Add contact</button>
+</form>
+{% endblock %}
