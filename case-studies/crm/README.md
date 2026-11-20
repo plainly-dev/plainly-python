@@ -1,29 +1,26 @@
-# CRM contacts page, built test-first by two agents
+# CRM contacts, tests first (no app yet)
 
-1. **Test-writer agent** wrote `tests/` (113 tests, `tests/CONTRACT.md`) with no app code in existence, using `plainly`.
-2. The tests were checked red (all 113 failed with `No module named 'crm_app'`), then locked: read-only folder plus a checksum.
-3. **Implementer agent** wrote `crm_app/` seeing only the tests. It could not change them.
-4. Checked afterwards: 113 pass, test checksums identical, 99% coverage, no special-casing of test inputs,
-   and the implementer's transcript shows it read only `tests/` (4 commands, none outside the project).
+This folder holds the tests for a small Flask CRM, written with `plainly` **before any app code exists**.
+The point is to see how well plainly works as the contract a person reviews before anything gets built.
 
-`SPEC.md` is the generated spec (114 stories, 833 sentences, no hand-written wording marks).
-`NOTES_FROM_IMPLEMENTER.md` lists the five places the implementer had to guess.
+- `tests/CONTRACT.md`: what the app must do, in prose (routes, field rules, error answers).
+- `tests/test_*.py`: 53 tests, every check a plainly sentence (`plainly-lint tests/` passes).
+- `tests/crm.py`: the only helper. One method per HTTP request; it keeps `status`, `body`, `error`, `errors`,
+  `names`, `texts`, `location` and `page` from the last answer. **Read it once**: those names are chosen by hand.
+- `SPEC.md`: the generated spec, 53 stories. Review this file instead of the test code.
+- `FEEDBACK.md`: what plainly was missing while writing these tests.
+
+The app (`crm_app/`, with `create_app()`) is Trello card 11 and is not here yet, so today every test fails with
+`ModuleNotFoundError: No module named 'crm_app'`. That is expected. The tests are not run by the root CI suite.
 
 ```
 pip install flask -e ../..      # from case-studies/crm
-pytest
-pytest --plainly-md SPEC.md
+pytest                          # red until crm_app exists
+pytest --plainly-md SPEC.md     # only rewrites SPEC.md on a passing run
 ```
 
-## How good were the tests? (18 deliberate bugs put into the finished app)
+## How SPEC.md was produced before the app existed
 
-First run: 16 caught, 2 survived. After the follow-up below: 17 caught, 1 left (by design).
-
-- **Duplicate email check made case-sensitive: survived the first run.** A real gap. The tests only registered a lowercase email and retried it in capitals.
-  Fixed by `test_an_email_saved_with_capitals_still_blocks_the_lowercase_version` (register `Ann@Example.com`, retry `ann@example.com`).
-  Three variants of the bug were tried; the new test fails on all three, and the app needed no change (114 tests pass).
-- Deleted ids reused: survived, and that is by design. The contract leaves it open, so it is not a bug.
-
-Caught: search ignoring company, case-sensitive search, edit clashing with your own email, notes oldest first, name limit off by one,
-no trimming, unescaped name (XSS), refused create answering 200, pipeline count wrong, delete doing nothing, any text accepted as an email,
-status filter ignored, unknown API id answering HTML, whitespace-only note accepted, unknown contact not 404, edit skipping validation.
+plainly only writes `SPEC.md` from a passing run. To get one, and to check that the tests do not contradict each other,
+the tests were run once against a throwaway reference app kept outside the repository. It was deleted afterwards and
+is not committed, so whoever builds `crm_app/` starts from the contract and the tests alone.

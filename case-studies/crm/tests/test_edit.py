@@ -1,124 +1,89 @@
-"""Editing a contact with POST /contacts/<id>/edit. The form always sends all five fields."""
+"""Reading, changing and deleting one contact."""
+from plainly import expect, given
 
-from plainly import compact, given, spec
-
-from rules import CRM, after_editing
-
-editing_unknown = spec(after_editing)
+from crm import CRM
 
 
-def two_people():
+def ann_and_bob():
     crm = given(CRM)
-    crm.add_contact(name="Ann Lee", email="ann@example.com", phone="555-0100", company="Acme Corp", status="lead")
-    crm.add_contact(name="Bob Stone", email="bob@example.com", status="lost")
+    crm.post("/api/contacts", name="Ann", email="ann@x.io", company="Acme")
+    crm.post("/api/contacts", name="Bob", email="bob@x.io")
     return crm
 
 
-def test_editing_a_contact_that_does_not_exist_answers_404():
-    editing_unknown.if_(99, name="Ann", email="ann@example.com", status="lead").then_give("status 404")
+def test_an_unknown_contact_is_not_found_and_the_answer_is_json():
+    crm = given(CRM)
+    crm.get("/api/contacts/99")
+    crm.then.has(status=404, error="not found")
+    crm.patch("/api/contacts/99", name="Zed")
+    crm.then.has(status=404, error="not found")
+    crm.delete("/api/contacts/99")
+    crm.then.has(status=404, error="not found")
 
 
-def test_a_valid_edit_sends_you_back_to_the_page_of_the_contact():
-    crm = two_people()
-    crm.after_editing(1, name="Ann Smith", email="ann@example.com", status="customer")
-    crm.then.gave("redirect to /contacts/1")
+def test_only_the_fields_sent_are_changed():
+    crm = ann_and_bob()
+    crm.patch("/api/contacts/1", status="customer")
+    crm.then.has(status=200, body={"id": 1, "name": "Ann", "email": "ann@x.io", "company": "Acme",
+                                   "status": "customer"})
 
 
-def test_an_edit_replaces_every_detail_of_the_contact():
-    crm = two_people()
-    crm.edit_contact(
-        1, name="Ann Smith", email="ann.smith@example.com", phone="555-0199", company="Globex", status="customer"
-    )
-    crm.details_of(1)
-    crm.then.gave("Ann Smith | ann.smith@example.com | 555-0199 | Globex | customer")
+def test_a_change_is_kept():
+    crm = ann_and_bob()
+    crm.patch("/api/contacts/1", name="Ann Lee", company="Initech")
+    crm.get("/api/contacts/1")
+    expect(crm.body["name"]).should.be("Ann Lee")
+    expect(crm.body["company"]).should.be("Initech")
 
 
-def test_an_edit_can_clear_the_phone_and_the_company():
-    crm = two_people()
-    crm.edit_contact(1, name="Ann Lee", email="ann@example.com", status="lead", phone="", company="")
-    crm.details_of(1)
-    crm.then.gave("Ann Lee | ann@example.com | (blank) | (blank) | lead")
+def test_a_change_follows_the_same_rules_as_a_new_contact():
+    crm = ann_and_bob()
+    crm.patch("/api/contacts/1", name=" ", email="nope", status="vip")
+    crm.then.has(status=400, errors={"name": "is required", "email": "is not a valid email",
+                                     "status": "is not a valid status"})
 
 
-def test_an_edit_trims_spaces_like_creating_does():
-    crm = two_people()
-    crm.edit_contact(1, name="  Ann Smith ", email=" ann@example.com ", status="lead", phone=" 555 ", company=" X ")
-    crm.details_of(1)
-    crm.then.gave("Ann Smith | ann@example.com | 555 | X | lead")
+def test_a_refused_change_changes_nothing():
+    crm = ann_and_bob()
+    crm.patch("/api/contacts/1", name="Ann Lee", email="nope")
+    crm.get("/api/contacts/1")
+    expect(crm.body["name"]).should.be("Ann")
 
 
-def test_an_edit_shows_a_confirmation():
-    crm = two_people()
-    crm.flash_after_editing(1, name="Ann Smith", email="ann@example.com", status="lead")
-    crm.then.gave(["Contact updated."])
+def test_a_contact_can_keep_its_own_email():
+    crm = ann_and_bob()
+    crm.patch("/api/contacts/1", email="ANN@x.io", name="Ann Lee")
+    crm.then.has(status=200)
+    expect(crm.body["email"]).should.be("ann@x.io")
 
 
-def test_an_edit_changes_only_that_contact():
-    crm = two_people()
-    crm.edit_contact(1, name="Ann Smith", email="ann@example.com", status="customer")
-    crm.names_listed()
-    crm.then.gave(["Ann Smith", "Bob Stone"])
-    crm.details_of(2)
-    crm.then.gave("Bob Stone | bob@example.com | (blank) | (blank) | lost")
+def test_a_contact_cannot_take_another_contacts_email():
+    crm = ann_and_bob()
+    crm.patch("/api/contacts/2", email="Ann@X.io")
+    crm.then.has(status=409, error="email already exists")
 
 
-def test_an_edit_is_checked_like_a_new_contact():
-    crm = two_people()
-    crm.errors_when_editing(1, name="", email="nope", status="lead")
-    crm.then.gave({"name": "Name is required.", "email": "Enter a valid email address."})
-    crm.errors_when_editing(1, name="Ann Lee", email="ann@example.com", status="vip")
-    crm.then.gave({"status": "Status must be lead, customer or lost."})
-    crm.errors_when_editing(1, name="Ann Lee", email="", status="lead")
-    crm.then.gave({"email": "Email is required."})
-    crm.after_editing(1, name="", email="ann@example.com", status="lead")
-    crm.then.gave("status 400")
+def test_the_id_cannot_be_changed():
+    crm = ann_and_bob()
+    crm.patch("/api/contacts/1", id=7, name="Ann Lee")
+    crm.then.has(status=200)
+    expect(crm.body["id"]).should.be(1)
+    crm.get("/api/contacts/7")
+    crm.then.has(status=404)
 
 
-def test_a_refused_edit_changes_nothing():
-    crm = two_people()
-    crm.after_editing(1, name="", email="nope", status="customer", phone="000", company="Other")
-    crm.then.gave("status 400")
-    crm.details_of(1)
-    crm.then.gave("Ann Lee | ann@example.com | 555-0100 | Acme Corp | lead")
+def test_a_deleted_contact_is_gone():
+    crm = ann_and_bob()
+    crm.delete("/api/contacts/1")
+    crm.then.has(status=204, page="")
+    crm.get("/api/contacts/1")
+    crm.then.has(status=404)
+    crm.get("/api/contacts")
+    crm.then.has(names=["Bob"])
 
 
-def test_a_refused_edit_shows_the_form_again_with_what_was_typed():
-    crm = two_people()
-    crm.kept_value_when_editing(1, "name", name="Ann Smith", email="nope", status="lead")
-    crm.then.gave("Ann Smith")
-    crm.kept_value_when_editing(1, "email", name="Ann Smith", email="nope", status="lead")
-    crm.then.gave("nope")
-
-
-def test_a_name_of_more_than_100_characters_is_refused_when_editing_too():
-    crm = given(CRM, show=compact)
-    crm.add_contact(name="Ann Lee", email="ann@example.com")
-    crm.errors_when_editing(1, name="a" * 101, email="ann@example.com", status="lead")
-    crm.then.gave({"name": "Name must be at most 100 characters."})
-
-
-def test_a_contact_may_keep_its_own_email_whatever_the_case_or_spaces():
-    crm = two_people()
-    crm.after_editing(1, name="Ann Lee", email="ann@example.com", status="lead")
-    crm.then.gave("redirect to /contacts/1")
-    crm.after_editing(1, name="Ann Lee", email="ANN@Example.com", status="lead")
-    crm.then.gave("redirect to /contacts/1")
-    crm.after_editing(1, name="Ann Lee", email="  ann@example.com ", status="lead")
-    crm.then.gave("redirect to /contacts/1")
-
-
-def test_a_contact_cannot_take_the_email_of_another_contact():
-    crm = two_people()
-    crm.errors_when_editing(1, name="Ann Lee", email="bob@example.com", status="lead")
-    crm.then.gave({"email": "This email is already in use."})
-    crm.errors_when_editing(1, name="Ann Lee", email="BOB@EXAMPLE.COM", status="lead")
-    crm.then.gave({"email": "This email is already in use."})
-    crm.after_editing(1, name="Ann Lee", email="bob@example.com", status="lead")
-    crm.then.gave("status 400")
-
-
-def test_the_email_a_contact_gave_up_can_be_used_by_another_one():
-    crm = two_people()
-    crm.edit_contact(1, name="Ann Lee", email="ann.new@example.com", status="lead")
-    crm.after_editing(2, name="Bob Stone", email="ann@example.com", status="lost")
-    crm.then.gave("redirect to /contacts/2")
+def test_a_deleted_email_can_be_used_again():
+    crm = ann_and_bob()
+    crm.delete("/api/contacts/1")
+    crm.post("/api/contacts", name="New Ann", email="ann@x.io")
+    crm.then.has(status=201)
