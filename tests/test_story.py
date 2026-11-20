@@ -60,6 +60,39 @@ def test_method_calls_and_their_results_are_written_down():
     ]
 
 
+
+class Counter:
+    """Its methods return the counter itself, so calls can be chained."""
+
+    def __init__(self):
+        self.count = 0
+
+    def add(self, n):
+        self.count += n
+        return self
+
+
+def test_a_method_that_returns_its_own_object_lets_a_check_follow_on_the_same_line():
+    recorder.drain()
+    counter = given(Counter)
+    counter.add(2).then.has(count=2)
+    counter.add(3).add(1).then.has(count=6)
+    assert sentences() == [
+        "given a Counter",
+        "when add(2) is called",
+        "then it has count 2",
+        "when add(3) is called",
+        "and add(1) is called",
+        "then it has count 6",
+    ]
+
+
+def test_a_chained_step_still_fails_loudly():
+    counter = given(Counter)
+    with pytest.raises(PlainlyError, match="it had {'count': 2}"):
+        counter.add(2).then.has(count=3)
+
+
 def test_expected_errors_are_part_of_the_story():
     recorder.drain()
     box = given(Box)
