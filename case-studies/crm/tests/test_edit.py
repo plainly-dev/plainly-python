@@ -13,12 +13,9 @@ def ann_and_bob():
 
 def test_an_unknown_contact_is_not_found_and_the_answer_is_json():
     crm = given(CRM)
-    crm.get("/api/contacts/99")
-    crm.then.has(status=404, error="not found")
-    crm.patch("/api/contacts/99", name="Zed")
-    crm.then.has(status=404, error="not found")
-    crm.delete("/api/contacts/99")
-    crm.then.has(status=404, error="not found")
+    crm.get("/api/contacts/99").then.has(status=404, error="not found")
+    crm.patch("/api/contacts/99", name="Zed").then.has(status=404, error="not found")
+    crm.delete("/api/contacts/99").then.has(status=404, error="not found")
 
 
 def test_only_the_fields_sent_are_changed():
@@ -52,38 +49,30 @@ def test_a_refused_change_changes_nothing():
 
 def test_a_contact_can_keep_its_own_email():
     crm = ann_and_bob()
-    crm.patch("/api/contacts/1", email="ANN@x.io", name="Ann Lee")
-    crm.then.has(status=200)
+    crm.patch("/api/contacts/1", email="ANN@x.io", name="Ann Lee").then.has(status=200)
     expect(crm.body["email"]).should.be("ann@x.io")
 
 
 def test_a_contact_cannot_take_another_contacts_email():
     crm = ann_and_bob()
-    crm.patch("/api/contacts/2", email="Ann@X.io")
-    crm.then.has(status=409, error="email already exists")
+    crm.patch("/api/contacts/2", email="Ann@X.io").then.has(status=409, error="email already exists")
 
 
 def test_the_id_cannot_be_changed():
     crm = ann_and_bob()
-    crm.patch("/api/contacts/1", id=7, name="Ann Lee")
-    crm.then.has(status=200)
+    crm.patch("/api/contacts/1", id=7, name="Ann Lee").then.has(status=200)
     expect(crm.body["id"]).should.be(1)
-    crm.get("/api/contacts/7")
-    crm.then.has(status=404)
+    crm.get("/api/contacts/7").then.has(status=404)
 
 
 def test_a_deleted_contact_is_gone():
     crm = ann_and_bob()
-    crm.delete("/api/contacts/1")
-    crm.then.has(status=204, page="")
-    crm.get("/api/contacts/1")
-    crm.then.has(status=404)
-    crm.get("/api/contacts")
-    crm.then.has(names=["Bob"])
+    crm.delete("/api/contacts/1").then.has(status=204, page="")
+    crm.get("/api/contacts/1").then.has(status=404)
+    crm.get("/api/contacts").then.has(names=["Bob"])
 
 
 def test_a_deleted_email_can_be_used_again():
     crm = ann_and_bob()
     crm.delete("/api/contacts/1")
-    crm.post("/api/contacts", name="New Ann", email="ann@x.io")
-    crm.then.has(status=201)
+    crm.post("/api/contacts", name="New Ann", email="ann@x.io").then.has(status=201)

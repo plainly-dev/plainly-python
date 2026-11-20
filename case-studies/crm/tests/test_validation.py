@@ -25,8 +25,7 @@ def test_a_name_can_be_100_characters_but_not_101():
 
 def test_a_name_is_measured_after_removing_spaces():
     crm = given(CRM, show=compact)
-    crm.post("/api/contacts", name=" " + "x" * 100 + " ", email="ann@x.io")
-    crm.then.has(status=201)
+    crm.post("/api/contacts", name=" " + "x" * 100 + " ", email="ann@x.io").then.has(status=201)
 
 
 def test_a_company_can_be_100_characters_but_not_101():
@@ -42,8 +41,7 @@ def test_an_email_must_look_like_an_email():
 def test_ordinary_emails_are_accepted():
     crm = given(CRM)
     for good in ["ann@x.io", "ann.lee+crm@mail.example.com", "a_b-c@x-y.co"]:
-        crm.post("/api/contacts", name="Ann", email=good)
-        crm.then.has(status=201)
+        crm.post("/api/contacts", name="Ann", email=good).then.has(status=201)
 
 
 def test_status_must_be_lead_customer_or_lost():
@@ -61,23 +59,18 @@ def test_every_invalid_field_is_reported_at_once():
 
 def test_a_body_that_is_not_a_json_object_is_refused():
     crm = given(CRM)
-    crm.post_body("/api/contacts", "not json")
-    crm.then.has(status=400, error="expected a JSON object")
-    crm.post_body("/api/contacts", '["Ann", "ann@x.io"]')
-    crm.then.has(status=400, error="expected a JSON object")
+    crm.post_body("/api/contacts", "not json").then.has(status=400, error="expected a JSON object")
+    crm.post_body("/api/contacts", '["Ann", "ann@x.io"]').then.has(status=400, error="expected a JSON object")
 
 
 def test_an_email_can_only_be_used_once_ignoring_case():
     crm = given(CRM)
     crm.post("/api/contacts", name="Ann", email="Ann@X.io")
-    crm.post("/api/contacts", name="Other Ann", email="ann@x.io")
-    crm.then.has(status=409, error="email already exists")
+    crm.post("/api/contacts", name="Other Ann", email="ann@x.io").then.has(status=409, error="email already exists")
 
 
 def test_a_refused_contact_is_not_saved():
     crm = given(CRM)
     crm.post("/api/contacts", name="", email="ann@x.io")
-    crm.post("/api/contacts", name="Ann", email="ann@x.io")
-    crm.then.has(status=201, location="/api/contacts/1")
-    crm.get("/api/contacts")
-    crm.then.has(names=["Ann"])
+    crm.post("/api/contacts", name="Ann", email="ann@x.io").then.has(status=201, location="/api/contacts/1")
+    crm.get("/api/contacts").then.has(names=["Ann"])

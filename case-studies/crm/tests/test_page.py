@@ -6,8 +6,7 @@ from crm import CRM
 
 def test_an_empty_crm_says_so():
     crm = given(CRM)
-    crm.get("/")
-    crm.then.has(status=200)
+    crm.get("/").then.has(status=200)
     expect(crm.page).should.contain("No contacts yet")
 
 
@@ -15,8 +14,7 @@ def test_the_page_lists_names_and_companies_in_name_order():
     crm = given(CRM)
     crm.post("/api/contacts", name="Bob Stone", email="bob@x.io", company="Globex")
     crm.post("/api/contacts", name="Ann Lee", email="ann@x.io", company="Acme")
-    crm.get("/")
-    crm.then.has(status=200)
+    crm.get("/").then.has(status=200)
     expect(crm.page).should.contain("Ann Lee")
     expect(crm.page).should.contain("Acme")
     expect(crm.page).should.not_.contain("No contacts yet")

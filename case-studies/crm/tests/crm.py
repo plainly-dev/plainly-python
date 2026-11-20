@@ -1,7 +1,8 @@
 """The only test helper: a CRM you talk to over HTTP, one request per method.
 
 Reviewers: this file is the one place where wording is chosen by hand, so check it once.
-Each method sends exactly one request and keeps what came back as plain attributes:
+Each method sends exactly one request, keeps what came back as plain attributes, and returns the CRM,
+so the check can sit on the same line: `crm.post(...).then.has(status=201)`. The attributes are:
 
     status    the HTTP status code, e.g. 201
     body      the JSON answer (None if the answer is not JSON)
@@ -31,21 +32,21 @@ class CRM:
     # ----- one method per kind of request ---------------------------------------
     def post(self, path, **fields):
         """POST a JSON object made of the keyword arguments."""
-        self._keep(self._client.post(path, json=fields))
+        return self._keep(self._client.post(path, json=fields))
 
     def post_body(self, path, body):
         """POST raw text sent as application/json, for bodies that are not a JSON object."""
-        self._keep(self._client.post(path, data=body, content_type="application/json"))
+        return self._keep(self._client.post(path, data=body, content_type="application/json"))
 
     def get(self, path, **query):
         """GET, with the keyword arguments as the query string."""
-        self._keep(self._client.get(path, query_string=query))
+        return self._keep(self._client.get(path, query_string=query))
 
     def patch(self, path, **fields):
-        self._keep(self._client.patch(path, json=fields))
+        return self._keep(self._client.patch(path, json=fields))
 
     def delete(self, path):
-        self._keep(self._client.delete(path))
+        return self._keep(self._client.delete(path))
 
     # ----- what came back ------------------------------------------------------------
     def _keep(self, response):
@@ -61,6 +62,7 @@ class CRM:
         self.errors = body.get("errors")
         self.names = [c.get("name") for c in body.get("contacts", [])]
         self.texts = [n.get("text") for n in body.get("notes", [])]
+        return self  # so a check can follow on the same line: crm.post(...).then.has(status=201)
 
 
 def _path_only(location):
